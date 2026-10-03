@@ -2,9 +2,7 @@ package do.blaze.fleet.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import do.blaze.fleet.data.model.FleetSummaryCounts
-import do.blaze.fleet.data.model.MobileVehicleSummary
-import do.blaze.fleet.data.model.VehicleState
+import do.blaze.fleet.data.model.*
 import do.blaze.fleet.data.remote.BlazeFleetApi
 import do.blaze.fleet.data.remote.WebSocketClient
 import kotlinx.coroutines.flow.*
@@ -30,6 +28,15 @@ class FleetViewModel(
     private val _isLoading = MutableStateFlow(false)
     val isLoading = _isLoading.asStateFlow()
 
+    private val _alerts = MutableStateFlow<List<MobileAlertItem>>(emptyList())
+    val alerts = _alerts.asStateFlow()
+
+    private val _alertCounts = MutableStateFlow<MobileAlertCounts?>(null)
+    val alertCounts = _alertCounts.asStateFlow()
+
+    private val _isLoadingAlerts = MutableStateFlow(false)
+    val isLoadingAlerts = _isLoadingAlerts.asStateFlow()
+
     val isConnected = wsClient.isConnected
 
     val filteredVehicles = combine(_vehicles, _selectedFilter, _searchQuery) { list, filter, query ->
@@ -48,6 +55,7 @@ class FleetViewModel(
 
     init {
         loadFleetSummary()
+        loadAlerts()
         observeWebSocketPositions()
     }
 
@@ -73,6 +81,44 @@ class FleetViewModel(
                 // handle error
             } finally {
                 _isLoading.value = false
+            }
+        }
+    }
+
+    fun loadAlerts(unacknowledgedOnly: Boolean = false) {
+        viewModelScope.launch {
+            _isLoadingAlerts.value = true
+            try {
+                val resp = api.getMobileAlerts(limit = 50, offset = 0, unacknowledgedOnly = unacknowledgedOnly)
+                if (resp.isSuccessful && resp.body() != null) {
+                    val body = resp.body()!!
+                    _alerts.value = body.items
+                    _alertCounts.value = body.counts
+                }
+            } catch (e: Exception) {
+                // handle error
+            } finally {
+                _isLoadingAlerts.value = false
+            }
+        }
+    }
+
+    fun acknowledgeAlert(alertId: String, note: String = "Atendida desde app Android") {
+        viewModelScope.launch {
+            try {
+                val resp = api.acknowledgeAlert(alertId, AckAlertRequest(note))
+                if (resp.isSuccessful) {
+                    _alerts.value = _alerts.value.map { item ->
+                        if (item.id == alertId) {
+                            item.copy(acknowledged = true, ackNote = note)
+                        } else item
+                    }
+                    _alertCounts.value?.let { c ->
+                        _alertCounts.value = c.copy(unacknowledged = maxOf(0, c.unacknowledged - 1))
+                    }
+                }
+            } catch (e: Exception) {
+                // handle error
             }
         }
     }

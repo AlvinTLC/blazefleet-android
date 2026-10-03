@@ -15,10 +15,15 @@ Aplicación nativa en **Kotlin (Jetpack Compose / Material 3 / Android SDK 34)**
 - **🛡️ Inmovilizador & Comandos Remotos**:
   - Apagado remoto de motor (`engine_stop`) y habilitación (`engine_resume`).
   - Modal de confirmación de seguridad conectado a `/api/v1/mobile/vehicles/{id}/command`.
-- **🔔 Notificaciones Push Nativas (Firebase Cloud Messaging - FCM)**:
-  - Registro de token de dispositivo en `/api/v1/mobile/push-token`.
-  - Canales de notificación del sistema Android (`blazefleet_critical` para SOS y `blazefleet_alerts` para geocercas).
-  - Prioridad alta con vibración y sonido en segundo plano.
+- **🔔 Alertas Comerciales y Reconocimiento**:
+  - Alertas automáticas de Entrada/Salida de Geocercas (flota completa o por unidad).
+  - Control de Exceso de Velocidad a nivel de vehículo y geocerca.
+  - Reconocimiento interactivo de eventos (`POST /api/v1/mobile/alerts/{id}/ack`) con notas de operador.
+  - Alertas críticas de Botón de Pánico (SOS) y Corte de Batería con canales dedicados FCM (`blazefleet_critical`).
+- **🔗 Enlaces Temporales de Rastreo Público**:
+  - Generación de enlaces seguros de seguimiento temporal (`POST /api/v1/vehicles/{id}/share-link`) con copia directa al portapapeles.
+- **📊 Métricas y Telemetría en Tiempo Real**:
+  - Resumen instantáneo de unidades con exceso de velocidad y unidades dentro de geocercas activas.
 - **🔐 Seguridad y Sesión**:
   - Almacenamiento seguro de tokens JWT con **EncryptedSharedPreferences** (cifrado por hardware AES-256-GCM).
   - OkHttp Authenticator con rotación automática de refresh token (ventana de gracia de 60s).

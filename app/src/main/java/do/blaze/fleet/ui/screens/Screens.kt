@@ -15,10 +15,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import do.blaze.fleet.data.model.MobileAlertItem
 import do.blaze.fleet.data.model.MobileVehicleSummary
 import do.blaze.fleet.data.model.VehicleState
 import do.blaze.fleet.ui.components.StatusChip
@@ -199,6 +203,39 @@ fun FleetListScreen(
             )
         }
 
+        // Commercial Summary Pills (Speeding / Inside Geofence)
+        if (counts != null && (counts!!.speeding > 0 || counts!!.insideGeofence > 0)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 2.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (counts!!.speeding > 0) {
+                    Text(
+                        text = "⚡ ${counts!!.speeding} con exceso",
+                        color = BlazeIdle,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier
+                            .background(BlazeIdle.copy(alpha = 0.15f), RoundedCornerShape(6.dp))
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
+                }
+                if (counts!!.insideGeofence > 0) {
+                    Text(
+                        text = "📍 ${counts!!.insideGeofence} en geocerca",
+                        color = BlazePrimary,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier
+                            .background(BlazePrimaryGlow, RoundedCornerShape(6.dp))
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
+                }
+            }
+        }
+
         // Filter Pills
         LazyRow(
             modifier = Modifier.fillMaxWidth(),
@@ -244,6 +281,8 @@ fun VehicleDetailScreen(
     val vehicle by viewModel.vehicle.collectAsState()
     val isExecuting by viewModel.isExecuting.collectAsState()
     val statusMsg by viewModel.statusMessage.collectAsState()
+    val shareUrl by viewModel.shareUrl.collectAsState()
+    val clipboardManager = LocalClipboardManager.current
     var showConfirmDialog by remember { mutableStateOf<String?>(null) }
 
     Column(
@@ -270,6 +309,38 @@ fun VehicleDetailScreen(
             StatusChip(state = vehicle.state)
         }
 
+        // Commercial Badges: Geofence and Speed Limit
+        if (vehicle.currentGeofence != null || vehicle.speedLimitKmh != null) {
+            Spacer(modifier = Modifier.height(6.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (vehicle.currentGeofence != null) {
+                    Text(
+                        text = "📍 Geocerca: ${vehicle.currentGeofence}",
+                        color = BlazePrimary,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier
+                            .background(BlazePrimaryGlow, RoundedCornerShape(6.dp))
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
+                }
+                if (vehicle.speedLimitKmh != null) {
+                    Text(
+                        text = "⚡ Límite: ${vehicle.speedLimitKmh!!.toInt()} km/h",
+                        color = BlazeIdle,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier
+                            .background(BlazeIdle.copy(alpha = 0.15f), RoundedCornerShape(6.dp))
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
+                }
+            }
+        }
+
         Spacer(modifier = Modifier.height(14.dp))
 
         if (statusMsg != null) {
@@ -284,6 +355,36 @@ fun VehicleDetailScreen(
                     fontSize = 13.sp,
                     modifier = Modifier.padding(12.dp)
                 )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+
+        if (shareUrl != null) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = BlazeSurface),
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Share, contentDescription = null, tint = BlazePrimary, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Enlace de rastreo público (2h):", color = TextSecondary, fontSize = 12.sp)
+                        Spacer(modifier = Modifier.weight(1f))
+                        TextButton(onClick = {
+                            clipboardManager.setText(AnnotatedString(shareUrl!!))
+                        }) {
+                            Text("Copiar", color = BlazePrimary, fontSize = 12.sp)
+                        }
+                    }
+                    Text(
+                        text = shareUrl!!,
+                        color = BlazePrimary,
+                        fontSize = 11.sp,
+                        fontFamily = FontFamily.Monospace,
+                        maxLines = 1
+                    )
+                }
             }
             Spacer(modifier = Modifier.height(12.dp))
         }
@@ -312,6 +413,20 @@ fun VehicleDetailScreen(
             ) {
                 Text("Habilitar", color = Color.White, fontWeight = FontWeight.Bold)
             }
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // Commercial Share Link Button
+        OutlinedButton(
+            onClick = { viewModel.createShareLink(120) },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(10.dp),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = BlazePrimary)
+        ) {
+            Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Generar Enlace de Rastreo Temporal (2h)", fontWeight = FontWeight.SemiBold)
         }
 
         Spacer(modifier = Modifier.height(18.dp))
@@ -389,5 +504,179 @@ fun VehicleDetailScreen(
                 }
             }
         )
+    }
+}
+
+@Composable
+fun AlertsScreen(
+    fleetVM: FleetViewModel
+) {
+    val alerts by fleetVM.alerts.collectAsState()
+    val counts by fleetVM.alertCounts.collectAsState()
+    val isLoading by fleetVM.isLoadingAlerts.collectAsState()
+    var unacknowledgedOnly by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(BlazeBackground)
+    ) {
+        // Top Bar Filter
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Centro de Alertas",
+                color = TextPrimary,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.weight(1f))
+            FilterChip(
+                selected = unacknowledgedOnly,
+                onClick = {
+                    unacknowledgedOnly = !unacknowledgedOnly
+                    fleetVM.loadAlerts(unacknowledgedOnly)
+                },
+                label = {
+                    Text(if (unacknowledgedOnly) "Solo Pendientes" else "Todas (${counts?.total ?: alerts.size})")
+                }
+            )
+        }
+
+        if (isLoading && alerts.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = BlazePrimary)
+            }
+        } else if (alerts.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        imageVector = Icons.Default.Notifications,
+                        contentDescription = null,
+                        tint = TextMuted,
+                        modifier = Modifier.size(48.dp)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("No hay alertas registradas", color = TextSecondary, fontSize = 15.sp)
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                items(alerts, key = { it.id }) { alert ->
+                    AlertItemCard(alert = alert, onAck = { fleetVM.acknowledgeAlert(alert.id) })
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun AlertItemCard(
+    alert: MobileAlertItem,
+    onAck: () -> Unit
+) {
+    val severityColor = when (alert.severity) {
+        "critical" -> BlazeDanger
+        "warning" -> BlazeIdle
+        else -> BlazePrimary
+    }
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = BlazeSurface),
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(severityColor.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = when (alert.kind) {
+                            "sos" -> Icons.Default.Warning
+                            "geofence_enter", "geofence_exit" -> Icons.Default.Place
+                            "overspeed" -> Icons.Default.Speed
+                            else -> Icons.Default.Notifications
+                        },
+                        contentDescription = null,
+                        tint = severityColor,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = alert.title,
+                        color = TextPrimary,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = alert.body,
+                        color = TextSecondary,
+                        fontSize = 12.sp,
+                        maxLines = 2
+                    )
+                }
+
+                if (!alert.acknowledged) {
+                    TextButton(onClick = onAck) {
+                        Text("Atender", color = BlazePrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                } else {
+                    Text("✓ Atendida", color = BlazeMoving, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                }
+            }
+
+            if (alert.plate != null || alert.geofenceName != null || alert.time != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (alert.plate != null) {
+                        Text(
+                            text = alert.plate,
+                            color = BlazePrimary,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = FontFamily.Monospace,
+                            modifier = Modifier
+                                .background(BlazeSurfaceBorder, RoundedCornerShape(4.dp))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                    if (alert.geofenceName != null) {
+                        Text(
+                            text = "📍 ${alert.geofenceName}",
+                            color = TextSecondary,
+                            fontSize = 11.sp
+                        )
+                    }
+                    Spacer(modifier = Modifier.weight(1f))
+                    if (alert.time != null) {
+                        Text(
+                            text = alert.time,
+                            color = TextMuted,
+                            fontSize = 10.sp
+                        )
+                    }
+                }
+            }
+        }
     }
 }

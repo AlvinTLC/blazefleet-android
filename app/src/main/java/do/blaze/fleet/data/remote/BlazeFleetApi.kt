@@ -31,4 +31,26 @@ interface BlazeFleetApi {
 
     @GET("/api/v1/notifications")
     suspend fun getNotifications(@Query("limit") limit: Int = 30): Response<List<NotificationItem>>
+
+    @GET("/api/v1/mobile/alerts")
+    suspend fun getMobileAlerts(
+        @Query("limit") limit: Int = 50,
+        @Query("offset") offset: Int = 0,
+        @Query("unacknowledged_only") unacknowledgedOnly: Boolean = false
+    ): Response<MobileAlertsResponse>
+
+    @POST("/api/v1/mobile/alerts/{id}/ack")
+    suspend fun acknowledgeAlert(
+        @Path("id") alertId: String,
+        @Body body: AckAlertRequest = AckAlertRequest()
+    ): Response<Unit>
+
+    @GET("/api/v1/mobile/metrics")
+    suspend fun getMobileMetrics(): Response<MobileMetricsResponse>
+
+    @POST("/api/v1/vehicles/{id}/share-link")
+    suspend fun createVehicleShareLink(
+        @Path("id") vehicleId: String,
+        @Body body: CreateShareLinkRequest
+    ): Response<VehicleShareLinkResponse>
 }

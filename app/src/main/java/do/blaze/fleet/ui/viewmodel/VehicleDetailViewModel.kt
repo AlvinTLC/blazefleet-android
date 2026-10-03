@@ -2,6 +2,7 @@ package do.blaze.fleet.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import do.blaze.fleet.data.model.CreateShareLinkRequest
 import do.blaze.fleet.data.model.MobileVehicleSummary
 import do.blaze.fleet.data.model.RemoteCommandRequest
 import do.blaze.fleet.data.remote.BlazeFleetApi
@@ -24,6 +25,9 @@ class VehicleDetailViewModel(
 
     private val _statusMessage = MutableStateFlow<String?>(null)
     val statusMessage = _statusMessage.asStateFlow()
+
+    private val _shareUrl = MutableStateFlow<String?>(null)
+    val shareUrl = _shareUrl.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -61,6 +65,26 @@ class VehicleDetailViewModel(
                 _statusMessage.value = "Error: ${e.localizedMessage}"
             } finally {
                 _isExecuting.value = false
+            }
+        }
+    }
+
+    fun createShareLink(durationMinutes: Int = 120) {
+        viewModelScope.launch {
+            _statusMessage.value = null
+            try {
+                val resp = api.createVehicleShareLink(
+                    _vehicle.value.vehicleId,
+                    CreateShareLinkRequest(durationMinutes)
+                )
+                if (resp.isSuccessful && resp.body() != null) {
+                    _shareUrl.value = resp.body()!!.shareUrl
+                    _statusMessage.value = "Enlace de rastreo generado (válido por $durationMinutes min)."
+                } else {
+                    _statusMessage.value = "Error generando enlace de rastreo."
+                }
+            } catch (e: Exception) {
+                _statusMessage.value = "Error: ${e.localizedMessage}"
             }
         }
     }

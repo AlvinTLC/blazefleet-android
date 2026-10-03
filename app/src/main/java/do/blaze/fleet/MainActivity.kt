@@ -82,8 +82,8 @@ class MainActivity : ComponentActivity() {
                                 NavigationBarItem(
                                     selected = currentTab == 1,
                                     onClick = { currentTab = 1 },
-                                    icon = { Icon(Icons.Default.LocationOn, contentDescription = "Mapa") },
-                                    label = { Text("Mapa") },
+                                    icon = { Icon(Icons.Default.Notifications, contentDescription = "Alertas") },
+                                    label = { Text("Alertas") },
                                     colors = NavigationBarItemDefaults.colors(
                                         indicatorColor = BlazePrimary
                                     )
@@ -111,9 +111,8 @@ class MainActivity : ComponentActivity() {
                                     fleetVM = fleetVM,
                                     onVehicleClick = { selectedVehicle = it }
                                 )
-                                1 -> FleetListScreen(
-                                    fleetVM = fleetVM,
-                                    onVehicleClick = { selectedVehicle = it }
+                                1 -> do.blaze.fleet.ui.screens.AlertsScreen(
+                                    fleetVM = fleetVM
                                 )
                             }
                         }
